@@ -39,31 +39,31 @@ class Record(models.Model):
     def __str__(self):
         return self.book.book_name
 
+@receiver(pre_save, sender = Book)
+def assign_available(sender, instance, **kwargs):
+    book = instance
+    if book.stock == 0:
+        book.available = True
+    else:
+        book.available = False
+    book.save()
+
+
+
+
 @receiver(pre_save, sender = Record)
-def update_stock(sender, instance, **kwargs):
+def increment_stock(sender, instance, **kwargs):
     if instance.returned == False:
         if any(Record.objects.filter(id=instance.id)):
             if Record.objects.get(id=instance.id).returned == True:
                 instance.returned = True
-            else:
-                book = instance.book
-                if instance.returned == True:
-                    book.stock = book.stock + 1
-                if book.stock > 0:
-                    book.available = True
-                book.save()
-
-
-#     book = instance.book
-#     if instance.returned == False:
-#         book.stock = book.stock - 1
-#     else:
-#         book.stock = book.stock + 1
-#     if book.stock == 0:
-#         book.available = False
-#     else:
-#         book.available = True
-#     book.save()
+    else:
+        if Record.objects.get(id=instance.id).returned == False:
+            book = instance.book
+            book.stock = book.stock + 1
+            if book.stock > 0:
+                book.available = True
+            book.save()
 
 @receiver(post_save, sender = Record)
 def decrement_stock(sender, instance, created, **kwargs):
@@ -74,5 +74,3 @@ def decrement_stock(sender, instance, created, **kwargs):
             if book.stock < 1:
                 book.available = False
             book.save()
-        else:
-            book = None
